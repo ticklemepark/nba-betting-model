@@ -46,6 +46,21 @@ _MODEL_DIR        = Path("data/models")
 _TEST_SEASON      = 2024
 
 
+def _split_within_season(
+    player_df: pd.DataFrame,
+    season: int,
+    train_frac: float = 0.70,
+    val_frac: float   = 0.15,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Split a single season into train/val/test by date (earliest rows = train)."""
+    df = player_df[player_df["SEASON"] == season].copy()
+    df = df.sort_values("DATE").reset_index(drop=True)
+    n = len(df)
+    i_train = int(n * train_frac)
+    i_val   = int(n * (train_frac + val_frac))
+    return df.iloc[:i_train], df.iloc[i_train:i_val], df.iloc[i_val:]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Train player prop models and run backtest."
@@ -61,6 +76,14 @@ def main() -> None:
     parser.add_argument(
         "--edge-threshold", type=float, default=0.5,
         help="Minimum |prediction - line| in stat units to place a bet (default: 0.5)",
+    )
+    parser.add_argument(
+        "--quick", action="store_true",
+        help=(
+            "Train using a single-season time-split instead of walk-forward across "
+            "multiple seasons.  Use when only the current season is in the parquet. "
+            "Model quality is lower than the full historical training."
+        ),
     )
     args = parser.parse_args()
 
@@ -88,7 +111,45 @@ def main() -> None:
     # 2. Train all prop models
     # -----------------------------------------------------------------------
     log.info("Training prop models for: %s", args.stats)
-    results = train_all_props(player_df, stats=args.stats)
+
+    if args.quick:
+        # Single-season within-season split (when only current season data exists)
+        available_seasons = sorted(player_df["SEASON"].unique()) if "SEASON" in player_df.columns else []
+        if not available_seasons:
+            log.error("No SEASON column found.")
+            sys.exit(1)
+        season = available_seasons[-1]
+        log.info("--quick mode: training on single season %d with 70/15/15 date split.", season)
+        from src.models.player_props import walk_forward_train_prop
+        train_s, val_s, test_s = _split_within_season(player_df, season)
+        log.info("Split sizes: train=%d  val=%d  test=%d", len(train_s), len(val_s), len(test_s))
+        subset = pd.concat([train_s, val_s, test_s])
+        # Assign synthetic season labels so walk_forward_train_prop can split them
+        subset = subset.copy()
+        subset["SEASON"] = subset["SEASON"].astype(str)  # not used directly below
+        results = {}
+        for stat in args.stats:
+            log.info("=" * 45)
+            log.info("Training %s prop model ...", stat)
+            try:
+                from src.models.player_props import PlayerPropModel, prepare_player_features, _evaluate_prop
+                X_train, y_train = prepare_player_features(train_s, stat)
+                X_val,   y_val   = prepare_player_features(val_s,   stat)
+                X_test,  y_test  = prepare_player_features(test_s,  stat)
+                if X_train.empty or X_val.empty or X_test.empty:
+                    log.warning("  %s: insufficient data — skipping.", stat)
+                    continue
+                model = PlayerPropModel(stat=stat)
+                model.fit(X_train, y_train, X_val, y_val)
+                from src.models.player_props import _evaluate_prop
+                metrics = _evaluate_prop(model, X_test, y_test)
+                metrics.update({"stat": stat, "n_train": len(X_train), "n_val": len(X_val), "n_test": len(X_test)})
+                log.info("  %s — MAE=%.3f  dir_acc=%.3f", stat, metrics["mae"], metrics["direction_accuracy"])
+                results[stat] = (model, metrics)
+            except Exception as exc:
+                log.warning("  %s failed: %s — skipping.", stat, exc)
+    else:
+        results = train_all_props(player_df, stats=args.stats)
 
     if not results:
         log.error("No models trained successfully.")

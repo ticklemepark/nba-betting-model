@@ -126,6 +126,14 @@ def main() -> None:
         "--windows", nargs="+", type=int, default=_DEFAULT_WINDOWS,
         help="Rolling window sizes (default: 5 10 20)",
     )
+    parser.add_argument(
+        "--append", action="store_true",
+        help=(
+            "Append to the existing parquet (replace rows for the same seasons) "
+            "instead of overwriting. Use to add current-season rows after training "
+            "on historical data: --seasons 2026 --append"
+        ),
+    )
     args = parser.parse_args()
 
     log.info("=" * 60)
@@ -135,12 +143,16 @@ def main() -> None:
     log.info("  Output  : %s", args.out)
     log.info("=" * 60)
 
-    # 1. Load games from DB (for schedule context)
+    # 1. Load games from DB (for schedule context — historical seasons only)
     games = load_games_from_db(args.seasons)
     if games.empty:
-        log.error("No games in database for seasons %s.", args.seasons)
-        sys.exit(1)
-    log.info("Loaded %d games from database.", len(games))
+        log.warning(
+            "No games in DB for seasons %s — using player logs as schedule context "
+            "(this is expected for the current season).",
+            args.seasons,
+        )
+    else:
+        log.info("Loaded %d games from database.", len(games))
 
     # 2. Fetch player game logs
     player_logs = fetch_logs_for_seasons(
@@ -178,10 +190,22 @@ def main() -> None:
         n_players, n_seasons,
     )
 
-    # 7. Save
+    # 7. Save (with optional append/upsert)
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    player_features.to_parquet(args.out, index=False)
-    log.info("Saved to %s", args.out)
+    if args.append and args.out.exists():
+        existing = pd.read_parquet(args.out)
+        # Drop any rows for the seasons we just rebuilt, then append fresh
+        if "SEASON" in existing.columns:
+            existing = existing[~existing["SEASON"].isin(args.seasons)]
+        combined = pd.concat([existing, player_features], ignore_index=True)
+        combined.to_parquet(args.out, index=False)
+        log.info(
+            "Appended %d rows for seasons %s → %d total rows in %s",
+            len(player_features), args.seasons, len(combined), args.out,
+        )
+    else:
+        player_features.to_parquet(args.out, index=False)
+        log.info("Saved to %s", args.out)
     log.info("Done. Run 'python scripts/train_player_props.py' to train models.")
 
 

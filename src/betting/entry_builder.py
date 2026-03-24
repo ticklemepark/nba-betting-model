@@ -27,6 +27,7 @@ Usage:
 
 import itertools
 import logging
+from collections import defaultdict
 from typing import Union
 
 from src.betting.edge_calculator import GamePick, PropPick
@@ -135,6 +136,47 @@ def _blowout_inverse_score(game_pick: GamePick, prop_pick: PropPick) -> float:
     return 0.0
 
 
+def _is_valid_entry(picks: list[Pick]) -> bool:
+    """Enforce Underdog platform entry validity rules.
+
+    Rule 1 — Team diversity:
+        All picks cannot come from the same team.  At least 2 distinct teams
+        must be represented among the PropPicks in the entry.
+        (GamePicks count as their own "team" for diversity purposes.)
+
+    Rule 2 — Per-player limits:
+        • A player may appear at most 3 times in one entry (different stats).
+        • If a player appears 2 or more times, the entry must include at
+          least one HIGHER (over) and at least one LOWER (under) pick for
+          that player — you cannot stack the same direction.
+    """
+    prop_picks = [p for p in picks if isinstance(p, PropPick)]
+    game_picks = [p for p in picks if isinstance(p, GamePick)]
+
+    # Rule 1: need picks from at least 2 distinct teams (only enforced when 2+ prop picks exist)
+    if len(prop_picks) >= 2:
+        teams = {p.team for p in prop_picks}
+        # Game picks count as multi-team representation (home + away)
+        effective_team_count = len(teams) + (1 if game_picks else 0)
+        if effective_team_count < 2:
+            return False
+
+    # Rule 2: per-player restrictions
+    by_player: dict[str, list[PropPick]] = defaultdict(list)
+    for p in prop_picks:
+        by_player[p.player_name].append(p)
+
+    for player_picks in by_player.values():
+        if len(player_picks) > 3:
+            return False
+        if len(player_picks) >= 2:
+            directions = {p.direction for p in player_picks}
+            if "over" not in directions or "under" not in directions:
+                return False
+
+    return True
+
+
 def _score_entry(picks: list[Pick]) -> float:
     """Score an entry by mean edge + pairwise correlation bonuses."""
     mean_edge = sum(abs(p.edge) for p in picks) / len(picks)
@@ -176,8 +218,11 @@ def build_entries(
 
     for n in range(min_picks, min(max_picks, len(pool)) + 1):
         for combo in itertools.combinations(pool, n):
-            score = _score_entry(list(combo))
-            all_entries.append((score, list(combo)))
+            combo_list = list(combo)
+            if not _is_valid_entry(combo_list):
+                continue
+            score = _score_entry(combo_list)
+            all_entries.append((score, combo_list))
 
     # Sort descending by score, deduplicate by frozenset of pick ids, take top N.
     all_entries.sort(key=lambda x: x[0], reverse=True)

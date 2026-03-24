@@ -120,12 +120,16 @@ def _attach_to_player_games(
 
     if home_cols and not home_rolling.empty:
         home_slim = home_rolling[["PLAYER_ID", "DATE"] + home_cols].sort_values("DATE")
+        player_games["PLAYER_ID"] = player_games["PLAYER_ID"].astype(object)
+        home_slim["PLAYER_ID"] = home_slim["PLAYER_ID"].astype(object)
         player_games = pd.merge_asof(
             player_games, home_slim, on="DATE", by="PLAYER_ID", direction="backward"
         )
 
     if away_cols and not away_rolling.empty:
         away_slim = away_rolling[["PLAYER_ID", "DATE"] + away_cols].sort_values("DATE")
+        player_games["PLAYER_ID"] = player_games["PLAYER_ID"].astype(object)
+        away_slim["PLAYER_ID"] = away_slim["PLAYER_ID"].astype(object)
         player_games = pd.merge_asof(
             player_games, away_slim, on="DATE", by="PLAYER_ID", direction="backward"
         )

@@ -118,11 +118,20 @@ header {
 }
 .stats-bar strong { color: var(--text); }
 .stats-bar .sep { color: var(--border); }
+.model-badge {
+  display: inline-block;
+  background: rgba(59,130,246,.2);
+  color: #60a5fa;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 700;
+}
 
 /* ── Layout ──────────────────────────────────────────────────────────────── */
 .layout {
   display: flex;
-  height: calc(100vh - 115px);
+  height: calc(100vh - 120px);
   overflow: hidden;
 }
 
@@ -141,7 +150,7 @@ thead { position: sticky; top: 0; z-index: 10; }
 thead th {
   background: var(--surface);
   border-bottom: 2px solid var(--border);
-  padding: 9px 12px;
+  padding: 9px 10px;
   text-align: left;
   font-size: 10px;
   text-transform: uppercase;
@@ -163,7 +172,7 @@ tbody tr {
 }
 tbody tr:hover    { background: var(--surface2); }
 tbody tr.selected { background: #1e3a5f; }
-td { padding: 9px 12px; white-space: nowrap; }
+td { padding: 8px 10px; white-space: nowrap; }
 
 /* ── Cell types ──────────────────────────────────────────────────────────── */
 .player-name { font-weight: 600; }
@@ -188,10 +197,20 @@ td { padding: 9px 12px; white-space: nowrap; }
   letter-spacing: .06em;
   color: var(--text);
 }
-.line-val { font-weight: 700; font-variant-numeric: tabular-nums; }
-.avg-val  { font-variant-numeric: tabular-nums; }
-.avg-dash { color: var(--border); }
-.hit-rate { font-variant-numeric: tabular-nums; }
+.line-val  { font-weight: 700; font-variant-numeric: tabular-nums; }
+.avg-val   { font-variant-numeric: tabular-nums; }
+.avg-dash  { color: var(--border); }
+.hit-rate  { font-variant-numeric: tabular-nums; }
+.model-proj {
+  font-variant-numeric: tabular-nums;
+  color: #93c5fd;
+  font-weight: 600;
+}
+.model-prob {
+  font-size: 10px;
+  color: var(--muted);
+  margin-left: 2px;
+}
 
 /* edge badges */
 .edge {
@@ -205,6 +224,7 @@ td { padding: 9px 12px; white-space: nowrap; }
 .edge-pos   { background: rgba(34,197,94,.18);  color: #4ade80; }
 .edge-neg   { background: rgba(239,68,68,.18);  color: #f87171; }
 .edge-zero  { background: rgba(148,163,184,.1); color: var(--muted); }
+.edge-rolling { font-size: 10px; opacity: .8; }
 .rec-over   { color: #4ade80; font-weight: 700; }
 .rec-under  { color: #f87171; font-weight: 700; }
 .rec-none   { color: var(--muted); }
@@ -220,7 +240,7 @@ td { padding: 9px 12px; white-space: nowrap; }
   flex-shrink: 0;
   transition: width .2s ease;
 }
-.panel.open { width: 380px; }
+.panel.open { width: 400px; }
 
 .panel-hdr {
   padding: 14px 16px;
@@ -255,6 +275,65 @@ td { padding: 9px 12px; white-space: nowrap; }
 .mini-val   { font-size: 20px; font-weight: 700; color: var(--accent); }
 .mini-label { font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-top: 3px; }
 
+/* model prediction section */
+.section-title {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted);
+  margin: 14px 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.section-title::before {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.model-box {
+  background: rgba(59,130,246,.07);
+  border: 1px solid rgba(59,130,246,.2);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.model-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+  font-size: 12px;
+}
+.model-row-label { color: var(--muted); }
+.model-row-val   { font-weight: 600; font-variant-numeric: tabular-nums; }
+.model-interval  { font-size: 10px; color: var(--muted); margin-left: 4px; }
+.no-model-note   { font-size: 11px; color: var(--muted); font-style: italic; }
+
+/* feature grid */
+.feat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.feat-card {
+  background: var(--bg);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+.feat-val   { font-size: 14px; font-weight: 700; color: var(--text); }
+.feat-label { font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-top: 2px; }
+
+/* edge summary */
 .edge-summary {
   display: flex;
   gap: 16px;
@@ -265,16 +344,33 @@ td { padding: 9px 12px; white-space: nowrap; }
 }
 .edge-summary strong { color: var(--text); }
 
+/* DD badges */
+.dd-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.dd-badge {
+  display: inline-block;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+}
+.dd-badge strong { color: var(--accent); }
+
 /* game log table */
 .gl-table { width: 100%; border-collapse: collapse; font-size: 11px; }
 .gl-table th {
-  padding: 5px 7px; text-align: right;
+  padding: 5px 6px; text-align: right;
   color: var(--muted); font-size: 9px; text-transform: uppercase;
   border-bottom: 1px solid var(--border);
 }
 .gl-table th:first-child { text-align: left; }
 .gl-table td {
-  padding: 5px 7px; text-align: right;
+  padding: 5px 6px; text-align: right;
   border-bottom: 1px solid #1a2540;
   font-variant-numeric: tabular-nums;
 }
@@ -282,6 +378,8 @@ td { padding: 9px 12px; white-space: nowrap; }
 .gl-table tr:hover { background: var(--bg); }
 .hit  { color: #4ade80; font-weight: 700; }
 .miss { color: #f87171; }
+.win-badge  { color: #4ade80; font-size: 9px; font-weight: 700; }
+.loss-badge { color: #f87171; font-size: 9px; }
 
 /* ── Loading overlay ─────────────────────────────────────────────────────── */
 .overlay {
@@ -375,6 +473,12 @@ td { padding: 9px 12px; white-space: nowrap; }
     <option value="OVER">OVER only</option>
     <option value="UNDER">UNDER only</option>
   </select>
+  <select id="edgeFilter" onchange="applyFilters()">
+    <option value="">All Edges</option>
+    <option value="model">Model edge only</option>
+    <option value="pos4">Edge ≥ 4</option>
+    <option value="pos6">Edge ≥ 6</option>
+  </select>
   <button class="btn btn-ghost" onclick="clearFilters()">✕ Clear</button>
 </div>
 
@@ -385,9 +489,13 @@ td { padding: 9px 12px; white-space: nowrap; }
   <div>Games: <strong id="countGames">–</strong></div>
   <div class="sep">|</div>
   <div>Updated: <strong id="lastUpdated">–</strong></div>
+  <div class="sep" id="modelSep">|</div>
+  <div id="modelInfo">Models: <strong id="modelCount">–</strong>
+    <span id="modelBadge" class="model-badge" style="display:none">LIVE</span>
+  </div>
   <div class="sep" id="analysisSep" style="display:none">|</div>
   <div id="analysisInfo" style="display:none">
-    Analyzed: <strong id="analysisCount">–</strong> players
+    Stats fetched: <strong id="analysisCount">–</strong> players
   </div>
 </div>
 
@@ -403,17 +511,19 @@ td { padding: 9px 12px; white-space: nowrap; }
           <th class="sortable" data-key="team">Matchup</th>
           <th class="sortable" data-key="stat">Stat</th>
           <th class="sortable sorted-desc" data-key="line">Line</th>
-          <th title="Implied odds for OVER / UNDER from Underdog API">O/U Odds</th>
+          <th title="American odds for OVER/UNDER from Underdog API. Only shown when the line is asymmetric (one side has different implied probability). Symmetric lines show –.">O/U Odds</th>
           <th>L5</th>
           <th>L10</th>
           <th>Season</th>
-          <th>Hit %</th>
-          <th class="sortable" data-key="edge" title="Dashboard edge = (rolling projection − line) / line × 100%. Not the same as model probability edge used by the pipeline.">Edge*</th>
+          <th title="% of last 10 games where the player's actual stat exceeded this specific line value.">Hit%</th>
+          <th title="ML model projection (median). Shown when models are loaded from data/models/.">Model</th>
+          <th class="sortable" data-key="edge"
+              title="Edge vs Underdog implied probability. MODEL edge (pp) = P(stat>line) from ML model minus Underdog implied probability — same formula as daily_pipeline.py. ROLLING edge (%) = (rolling avg projection − line) / line × 100 — shown as fallback when models not loaded, marked with *.">Edge</th>
           <th>Pick</th>
         </tr>
       </thead>
       <tbody id="propsBody">
-        <tr><td colspan="11" class="empty"><h3>Loading lines…</h3><p>Fetching from Underdog Fantasy</p></td></tr>
+        <tr><td colspan="12" class="empty"><h3>Loading lines…</h3><p>Fetching from Underdog Fantasy</p></td></tr>
       </tbody>
     </table>
   </div>
@@ -428,7 +538,7 @@ td { padding: 9px 12px; white-space: nowrap; }
       <button class="panel-close" onclick="closePanel()">×</button>
     </div>
     <div class="panel-body" id="panelBody">
-      <p style="color:var(--muted)">Select a player to see game log.</p>
+      <p style="color:var(--muted)">Select a player to see details.</p>
     </div>
   </div>
 
@@ -436,13 +546,14 @@ td { padding: 9px 12px; white-space: nowrap; }
 
 <script>
 // ── State ─────────────────────────────────────────────────────────────────
-let allProps    = [];    // raw props from /api/props
-let displayData = [];    // current filtered + sorted view
+let allProps    = [];
+let displayData = [];
 let allGames    = [];
 let sortKey     = 'line';
 let sortAsc     = false;
 let selectedEl  = null;
 let analyzed    = false;
+let modelsLoaded = 0;
 
 const STAT_KEYS = {
   PTS:  ['points'],
@@ -464,15 +575,12 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('todayLabel').textContent =
     new Date().toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric', year:'numeric'});
 
-  // Column sort
   document.querySelectorAll('thead th.sortable').forEach(th => {
     th.addEventListener('click', () => {
       const key = th.dataset.key;
       if (sortKey === key) { sortAsc = !sortAsc; }
       else { sortKey = key; sortAsc = key === 'player_name'; }
-      document.querySelectorAll('thead th').forEach(h => {
-        h.classList.remove('sorted-asc','sorted-desc');
-      });
+      document.querySelectorAll('thead th').forEach(h => h.classList.remove('sorted-asc','sorted-desc'));
       th.classList.add(sortAsc ? 'sorted-asc' : 'sorted-desc');
       render(displayData);
     });
@@ -491,8 +599,9 @@ async function loadProps(force = false) {
     const d   = await res.json();
     if (!d.success) throw new Error(d.error || 'API error');
 
-    allProps  = d.props;
-    allGames  = d.games || [];
+    allProps     = d.props;
+    allGames     = d.games || [];
+    modelsLoaded = d.models_loaded || 0;
     updateGameDropdown(allGames);
     updateStatsBar(d.count, allGames.length, d.cached_at);
     setStatusDot(true);
@@ -509,19 +618,26 @@ async function refreshLines() {
   analyzed = false;
   document.getElementById('analysisInfo').style.display = 'none';
   document.getElementById('analysisSep').style.display  = 'none';
-  // Clear any stats from allProps
   allProps = allProps.map(p => ({
     player_name: p.player_name, team: p.team, opp: p.opp,
     stat: p.stat, line: p.line,
     over_payout: p.over_payout, under_payout: p.under_payout,
+    over_american: p.over_american, under_american: p.under_american,
+    odds_asymmetric: p.odds_asymmetric,
     game_id: p.game_id, game_date: p.game_date,
+    // Keep model predictions (no network calls needed, these come from parquet)
+    model_median: p.model_median, model_low: p.model_low, model_high: p.model_high,
+    model_prob_over: p.model_prob_over, model_edge: p.model_edge,
+    edge: p.model_edge != null ? p.model_edge : null,
+    edge_type: p.model_edge != null ? 'model' : null,
+    direction: p.direction,
   }));
   await loadProps(true);
 }
 
 async function analyzeAll() {
-  showOverlay(true, 'Analyzing all players…',
-    'Fetching stats from NBA API — takes 30–90 s for a full slate. Please wait.');
+  showOverlay(true, 'Fetching NBA stats…',
+    'Calling NBA API for rolling averages — takes 30–90 s for a full slate. Please wait.');
   document.getElementById('analyzeBtn').disabled = true;
 
   try {
@@ -529,7 +645,6 @@ async function analyzeAll() {
     const d   = await res.json();
     if (!d.success) throw new Error(d.error || 'Analysis failed');
 
-    // Merge stats back into allProps by (player_name, stat).
     const statsMap = {};
     for (const r of d.rankings) statsMap[`${r.player_name}|${r.stat}`] = r;
 
@@ -577,23 +692,29 @@ function applyFilters() {
   const stat   = document.getElementById('statFilter').value;
   const search = document.getElementById('playerSearch').value.trim().toLowerCase();
   const rec    = document.getElementById('recFilter').value;
+  const ef     = document.getElementById('edgeFilter').value;
 
-  displayData = allProps.filter(p =>
-    (!game   || p.game_id === game) &&
-    (!stat   || p.stat    === stat) &&
-    (!search || p.player_name.toLowerCase().includes(search)) &&
-    (!rec    || p.direction === rec)
-  );
+  displayData = allProps.filter(p => {
+    if (game   && p.game_id !== game) return false;
+    if (stat   && p.stat    !== stat) return false;
+    if (search && !p.player_name.toLowerCase().includes(search)) return false;
+    if (rec    && p.direction !== rec) return false;
+    if (ef === 'model'  && p.edge_type !== 'model') return false;
+    if (ef === 'pos4'   && (p.edge == null || p.edge < 4)) return false;
+    if (ef === 'pos6'   && (p.edge == null || p.edge < 6)) return false;
+    return true;
+  });
 
   document.getElementById('countProps').textContent = displayData.length;
   render(displayData);
 }
 
 function clearFilters() {
-  document.getElementById('gameFilter').value    = '';
-  document.getElementById('statFilter').value    = '';
-  document.getElementById('playerSearch').value  = '';
-  document.getElementById('recFilter').value     = '';
+  document.getElementById('gameFilter').value   = '';
+  document.getElementById('statFilter').value   = '';
+  document.getElementById('playerSearch').value = '';
+  document.getElementById('recFilter').value    = '';
+  document.getElementById('edgeFilter').value   = '';
   applyFilters();
 }
 
@@ -609,46 +730,60 @@ function render(props) {
 
   const tbody = document.getElementById('propsBody');
   if (!sorted.length) {
-    tbody.innerHTML = '<tr><td colspan="11" class="empty"><h3>No props match filters</h3><p>Try clearing filters or refreshing lines.</p></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="empty"><h3>No props match filters</h3><p>Try clearing filters or refreshing lines.</p></td></tr>';
     return;
   }
 
   tbody.innerHTML = sorted.map(p => {
     const hasStats = p.L10 !== undefined && p.L10 !== null;
+    const hasModel = p.model_median != null;
     const edge     = p.edge;
     const dir      = p.direction;
 
-    const edgeBadge = edge != null
-      ? `<span class="edge ${edgeClass(edge)}">${edge > 0 ? '+' : ''}${edge.toFixed(1)}%</span>`
+    // ── O/U Odds cell: only show when asymmetric ──────────────────────────
+    const oddsCell = p.odds_asymmetric && (p.over_american || p.under_american)
+      ? `<span style="font-size:10px;font-variant-numeric:tabular-nums;line-height:1.5">` +
+        `<span style="color:#4ade80">O:${p.over_american || '–'}</span><br>` +
+        `<span style="color:#f87171">U:${p.under_american || '–'}</span></span>`
       : `<span class="avg-dash">–</span>`;
+
+    // ── Model projection cell ─────────────────────────────────────────────
+    const modelCell = hasModel
+      ? `<span class="model-proj">${p.model_median.toFixed(1)}</span>` +
+        `<span class="model-prob">(${(p.model_prob_over*100).toFixed(0)}%)</span>`
+      : `<span class="avg-dash">–</span>`;
+
+    // ── Edge cell: model edge (pp) or rolling edge (%) ────────────────────
+    let edgeBadge;
+    if (edge != null) {
+      const isModel  = p.edge_type === 'model';
+      const suffix   = isModel ? 'pp' : '%*';
+      const cls      = edgeClass(edge);
+      const extraCls = isModel ? '' : ' edge-rolling';
+      edgeBadge = `<span class="edge ${cls}${extraCls}">${edge > 0 ? '+' : ''}${edge.toFixed(1)}${suffix}</span>`;
+    } else {
+      edgeBadge = `<span class="avg-dash">–</span>`;
+    }
 
     const recBadge = dir === 'OVER'  ? `<span class="rec-over">OVER</span>`
                    : dir === 'UNDER' ? `<span class="rec-under">UNDER</span>`
                    : `<span class="rec-none">–</span>`;
-
     const dash = `<span class="avg-dash">–</span>`;
-
-    // Over/under odds display: show "even" as "–", otherwise show "O:-115 / U:+100" style
-    const overOdds  = p.over_american  || 'even';
-    const underOdds = p.under_american || 'even';
-    const oddsCell  = (overOdds === 'even' && underOdds === 'even')
-      ? `<span class="avg-dash">–</span>`
-      : `<span style="font-size:10px;font-variant-numeric:tabular-nums">` +
-        `O:${overOdds}<br>U:${underOdds}</span>`;
 
     return `<tr onclick="handleRow(this,'${esc(p.player_name)}','${p.stat}',${p.line})">
       <td><span class="player-name">${esc(p.player_name)}</span></td>
       <td>
-        <span class="team-tag">${p.team}</span>
-        <span class="vs-tag">vs ${p.opp}</span>
+        <span class="team-tag">${esc(p.team)}</span>
+        <span class="vs-tag">vs ${esc(p.opp)}</span>
       </td>
       <td><span class="stat-pill">${p.stat}</span></td>
       <td class="line-val">${p.line}</td>
       <td>${oddsCell}</td>
-      <td class="avg-val">${hasStats && p.L5     != null ? p.L5.toFixed(1)            : dash}</td>
-      <td class="avg-val">${hasStats && p.L10    != null ? p.L10.toFixed(1)           : dash}</td>
-      <td class="avg-val">${hasStats && p.season != null ? p.season.toFixed(1)        : dash}</td>
+      <td class="avg-val">${hasStats && p.L5     != null ? p.L5.toFixed(1)     : dash}</td>
+      <td class="avg-val">${hasStats && p.L10    != null ? p.L10.toFixed(1)    : dash}</td>
+      <td class="avg-val">${hasStats && p.season != null ? p.season.toFixed(1) : dash}</td>
       <td class="hit-rate">${hasStats && p.hit_rate != null ? (p.hit_rate*100).toFixed(0)+'%' : dash}</td>
+      <td>${modelCell}</td>
       <td>${edgeBadge}</td>
       <td>${recBadge}</td>
     </tr>`;
@@ -658,18 +793,126 @@ function render(props) {
 function renderPanel(d, stat, line) {
   const logs  = d.game_logs || [];
   const keys  = STAT_KEYS[stat] || [];
+  const model = d.model;
+  const feats = d.features || {};
 
   const panelStatVal = (g) => keys.reduce((s,k) => s + (parseFloat(g[k]) || 0), 0);
 
-  const edgeTxt = d.edge != null
-    ? `<span class="${d.direction === 'OVER' ? 'rec-over' : 'rec-under'}">${d.edge > 0 ? '+' : ''}${d.edge}%</span>`
+  // ── Model prediction section ────────────────────────────────────────────
+  let modelSection = '';
+  if (model) {
+    const edgeCls = model.model_edge > 0 ? 'rec-over' : 'rec-under';
+    const projDir = model.model_edge > 0 ? 'OVER' : 'UNDER';
+    modelSection = `
+      <div class="section-title">Model Prediction</div>
+      <div class="model-box">
+        <div class="model-row">
+          <span class="model-row-label">Projection</span>
+          <span class="model-row-val">${model.model_median.toFixed(1)}
+            <span class="model-interval">(${model.model_low.toFixed(1)} – ${model.model_high.toFixed(1)})</span>
+          </span>
+        </div>
+        <div class="model-row">
+          <span class="model-row-label">P(OVER ${line})</span>
+          <span class="model-row-val ${model.model_prob_over > 0.5 ? 'rec-over' : 'rec-under'}">${(model.model_prob_over*100).toFixed(1)}%</span>
+        </div>
+        <div class="model-row">
+          <span class="model-row-label">Edge vs Underdog</span>
+          <span class="model-row-val ${edgeCls}">${model.model_edge > 0 ? '+' : ''}${model.model_edge.toFixed(1)} pp → <strong>${projDir}</strong></span>
+        </div>
+      </div>`;
+  } else {
+    modelSection = `
+      <div class="section-title">Model Prediction</div>
+      <p class="no-model-note">Models not loaded. Run <code>scripts/train_player_props.py</code> to train, then place .joblib files in <code>data/models/</code>.</p>
+      <br>`;
+  }
+
+  // ── Rolling stats summary ───────────────────────────────────────────────
+  const edgeVal  = d.edge;
+  const edgeType = d.edge_type;
+  const edgeTxt  = edgeVal != null
+    ? `<span class="${edgeVal > 0 ? 'rec-over' : 'rec-under'}">${edgeVal > 0 ? '+' : ''}${edgeVal}${edgeType === 'model' ? 'pp' : '%*'}</span>`
     : '–';
 
+  // ── Model features section ──────────────────────────────────────────────
+  const featCards = [];
+  if (feats.feat_l5    != null) featCards.push([feats.feat_l5.toFixed(1),    'L5 (Parquet)']);
+  if (feats.feat_l10   != null) featCards.push([feats.feat_l10.toFixed(1),   'L10 (Parquet)']);
+  if (feats.home_avg   != null) featCards.push([feats.home_avg.toFixed(1),   'Home Avg']);
+  if (feats.away_avg   != null) featCards.push([feats.away_avg.toFixed(1),   'Away Avg']);
+  if (feats.vs_opp_avg != null) {
+    const n = feats.vs_opp_n ? ` (${feats.vs_opp_n}g)` : '';
+    featCards.push([feats.vs_opp_avg.toFixed(1)+n, 'vs Opp Avg']);
+  }
+  if (feats.usage_l5   != null) featCards.push([(feats.usage_l5*100).toFixed(1)+'%', 'Usage L5']);
+  if (feats.usage_l10  != null) featCards.push([(feats.usage_l10*100).toFixed(1)+'%', 'Usage L10']);
+  if (feats.teammate_out) {
+    const boost = feats.teammate_boost != null ? `+${feats.teammate_boost.toFixed(1)}` : '?';
+    featCards.push([boost, 'Teammate Out Boost']);
+  }
+
+  const featureSection = featCards.length > 0 ? `
+    <div class="section-title">Model Features</div>
+    <div class="feat-grid">
+      ${featCards.map(([v,l]) => `<div class="feat-card"><div class="feat-val">${v}</div><div class="feat-label">${l}</div></div>`).join('')}
+    </div>
+    ${feats.feature_date ? `<p style="font-size:10px;color:var(--muted);margin-bottom:12px">Feature row date: ${feats.feature_date}</p>` : ''}
+  ` : '';
+
+  // ── Double-double section ───────────────────────────────────────────────
+  let ddSection = '';
+  if (d.dd_sample > 0) {
+    const ddBadges = [];
+    if (d.dd_pts_reb_L10 != null)    ddBadges.push(`<span class="dd-badge">PTS+REB DD: <strong>${d.dd_pts_reb_L10}</strong>/${d.dd_sample}</span>`);
+    if (d.dd_pts_ast_L10 != null)    ddBadges.push(`<span class="dd-badge">PTS+AST DD: <strong>${d.dd_pts_ast_L10}</strong>/${d.dd_sample}</span>`);
+    if (d.triple_double_L10 != null) ddBadges.push(`<span class="dd-badge">Triple-D: <strong>${d.triple_double_L10}</strong>/${d.dd_sample}</span>`);
+    if (ddBadges.length > 0) {
+      ddSection = `<div class="section-title">Double-Doubles (L${d.dd_sample})</div>
+        <div class="dd-row">${ddBadges.join('')}</div>`;
+    }
+  }
+
+  // ── Extra columns for composite stats ──────────────────────────────────
   const extraCols = [];
   if (stat !== 'PTS' && keys.includes('points'))   extraCols.push(['PTS','points']);
-  if (stat !== 'REB' && keys.includes('rebounds'))  extraCols.push(['REB','rebounds']);
-  if (stat !== 'AST' && keys.includes('assists'))   extraCols.push(['AST','assists']);
-  if (!extraCols.length && stat !== 'PTS')          extraCols.push(['PTS','points']);
+  if (stat !== 'REB' && keys.includes('rebounds')) extraCols.push(['REB','rebounds']);
+  if (stat !== 'AST' && keys.includes('assists'))  extraCols.push(['AST','assists']);
+  if (!extraCols.length && stat !== 'PTS')         extraCols.push(['PTS','points']);
+
+  // ── Game log table ──────────────────────────────────────────────────────
+  const glHtml = `
+    <div class="section-title">Game Log</div>
+    <table class="gl-table">
+      <thead>
+        <tr>
+          <th>Date / Opp</th>
+          <th>W/L</th>
+          <th>${stat}</th>
+          ${extraCols.map(([l]) => `<th>${l}</th>`).join('')}
+          <th>MIN</th>
+          <th>FG%</th>
+          <th>+/-</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${logs.map(g => {
+          const sv   = panelStatVal(g);
+          const over = sv > line;
+          const wl   = g.result === 'W' || g.result === 1 ? 'W' : 'L';
+          const fgpct = g.fgm && g.fga ? (g.fgm/g.fga*100).toFixed(0)+'%' : '–';
+          return `<tr>
+            <td>${g.date || ''} ${g.opponent || ''}</td>
+            <td class="${wl === 'W' ? 'win-badge' : 'loss-badge'}">${wl}</td>
+            <td class="${over ? 'hit' : 'miss'}">${sv}</td>
+            ${extraCols.map(([,col]) => `<td>${g[col] != null ? g[col] : '–'}</td>`).join('')}
+            <td>${g.minutes != null ? Math.round(g.minutes) : '–'}</td>
+            <td style="color:var(--muted)">${fgpct}</td>
+            <td style="color:${(g.plus_minus||0)>=0?'#4ade80':'#f87171'}">${(g.plus_minus||0)>=0?'+':''}${g.plus_minus||0}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
 
   const html = `
     <div class="mini-grid">
@@ -693,28 +936,11 @@ function renderPanel(d, stat, line) {
       <div>Edge: ${edgeTxt}</div>
     </div>
 
-    <table class="gl-table">
-      <thead>
-        <tr>
-          <th>Date / Opp</th>
-          <th>${stat}</th>
-          ${extraCols.map(([label]) => `<th>${label}</th>`).join('')}
-          <th>MIN</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${logs.map(g => {
-          const sv  = panelStatVal(g);
-          const over = sv > line;
-          return `<tr>
-            <td>${g.date || ''} ${g.opponent || ''}</td>
-            <td class="${over ? 'hit' : 'miss'}">${sv}</td>
-            ${extraCols.map(([,col]) => `<td>${g[col] != null ? g[col] : '–'}</td>`).join('')}
-            <td>${g.minutes != null ? Math.round(g.minutes) : '–'}</td>
-          </tr>`;
-        }).join('')}
-      </tbody>
-    </table>`;
+    ${modelSection}
+    ${featureSection}
+    ${ddSection}
+    ${glHtml}
+  `;
 
   document.getElementById('panelBody').innerHTML = html;
 }
@@ -745,6 +971,11 @@ function updateStatsBar(count, gameCount, cachedAt) {
   document.getElementById('countGames').textContent  = gameCount;
   document.getElementById('lastUpdated').textContent =
     cachedAt ? new Date(cachedAt).toLocaleTimeString() : 'just now';
+
+  const mc = document.getElementById('modelCount');
+  const mb = document.getElementById('modelBadge');
+  mc.textContent = modelsLoaded > 0 ? modelsLoaded + ' loaded' : 'not loaded';
+  mb.style.display = modelsLoaded > 0 ? 'inline' : 'none';
 }
 
 function edgeClass(e) {
@@ -753,13 +984,8 @@ function edgeClass(e) {
   return 'edge-zero';
 }
 
-function setSpinner(on) {
-  document.getElementById('headerSpinner').classList.toggle('show', on);
-}
-
-function setStatusDot(live) {
-  document.getElementById('statusDot').classList.toggle('live', live);
-}
+function setSpinner(on)   { document.getElementById('headerSpinner').classList.toggle('show', on); }
+function setStatusDot(ok) { document.getElementById('statusDot').classList.toggle('live', ok); }
 
 function showOverlay(show, title='', sub='') {
   document.getElementById('overlay').classList.toggle('show', show);
@@ -769,7 +995,7 @@ function showOverlay(show, title='', sub='') {
 
 function showTableError(msg) {
   document.getElementById('propsBody').innerHTML =
-    `<tr><td colspan="11" class="empty"><h3>Error</h3><p>${msg}</p></td></tr>`;
+    `<tr><td colspan="12" class="empty"><h3>Error</h3><p>${msg}</p></td></tr>`;
 }
 
 function esc(s) {

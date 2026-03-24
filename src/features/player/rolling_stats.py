@@ -128,6 +128,8 @@ def _attach_to_player_games(
 
     rolling_slim = rolling[["PLAYER_ID", "DATE"] + feature_cols].sort_values("DATE")
 
+    player_games["PLAYER_ID"] = player_games["PLAYER_ID"].astype(object)
+    rolling_slim["PLAYER_ID"] = rolling_slim["PLAYER_ID"].astype(object)
     result = pd.merge_asof(
         player_games,
         rolling_slim,

@@ -112,7 +112,7 @@ def _dollar(v: float) -> str:
     return f"{sign}${v:,.2f}"
 
 
-def _sep(char: str = "─", width: int = 62) -> str:
+def _sep(char: str = "-", width: int = 62) -> str:
     return char * width
 
 
@@ -130,9 +130,9 @@ def _print_headline(summary: dict) -> None:
     pnl   = summary["net_pnl"]
     roi   = summary["roi"]
 
-    print(_sep("═"))
+    print(_sep("="))
     print("  P&L SUMMARY")
-    print(_sep("═"))
+    print(_sep("="))
     print(f"  Entries settled : {n:>6,}  ({won} won / {lost} lost)")
     print(f"  Win rate        : {_pct(wr):>7}")
     print(f"  Total wagered   : ${waged:>10,.2f}")
@@ -165,7 +165,7 @@ def _print_by_size(summary: dict) -> None:
         # be heavy; show P&L sign as proxy.
         wr_str = "—"   # not available at this level
         pnl_str = _dollar(pnl)
-        status = "✓ positive" if pnl > 0 else ("✗ negative" if pnl < 0 else "flat")
+        status = "[+] positive" if pnl > 0 else ("[-] negative" if pnl < 0 else "flat")
 
         print(f"  {size:>4}  {n:>5,}  ${wag:>9,.2f}  {pnl_str:>10}  "
               f"{'—':>9}  {_pct(be):>10}  {_pct(tgt):>7}  {status}")
@@ -215,13 +215,13 @@ def _print_phase3_comparison(summary: dict) -> None:
     if roi is not None:
         if roi >= 0.07:
             print()
-            print("  ✓ ROI is at or above the 7 % Phase 3 target.")
+            print("  [+] ROI is at or above the 7 % Phase 3 target.")
         elif roi >= 0:
             print()
             print("  ⚠  ROI is positive but below the 7 % target — continue shadow mode.")
         else:
             print()
-            print("  ✗ ROI is negative — do not go live yet.")
+            print("  [-] ROI is negative -- do not go live yet.")
     print()
 
 
@@ -270,7 +270,7 @@ def main() -> None:
         daily_df = _get_daily_pnl(start_date=start, end_date=end)
         _print_daily(daily_df)
 
-    print(_sep("═"))
+    print(_sep("="))
     print()
 
 

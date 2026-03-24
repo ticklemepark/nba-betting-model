@@ -204,12 +204,12 @@ def settle_date(
             continue
 
         entry_won = all(r[5] for r in results)
-        status    = "WON  ✓" if entry_won else "LOST ✗"
+        status    = "WON  [+]" if entry_won else "LOST [-]"
         amount    = float(picks.iloc[0]["bet_amount"])
 
         print(f"\n  Entry {entry_ref[:8]}  {status}  (${amount:.2f})")
         for name, stat, direction, line, actual, hit in results:
-            icon = "✓" if hit else "✗"
+            icon = "[+]" if hit else "[-]"
             print(f"    {icon} {name:<28} {stat:<6} {direction.upper():<6} {line:>5g}  "
                   f"actual={actual:.1f}")
 

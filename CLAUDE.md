@@ -570,6 +570,36 @@ For single-pick accuracy (before combining into entries):
 - [ ] If within expected range — go live with quarter-Kelly sizing
 - [ ] Gradually increase sizing as track record builds confidence
 
+### Phase 6: Dashboard Intelligence (Week 10+) — STATUS: COMPLETE
+The dashboard is now a full model UI, not just a prop browser.
+
+**Edge unification**:
+- Dashboard and pipeline now use the **same edge formula**: `P(stat > line) [ML model] − P(over) [Underdog implied probability]`, in percentage-points (pp).
+- Edge displays as `+7.2pp` (model) or `+4.8%*` (rolling average fallback when models not loaded).
+- Model predictions load **eagerly** from `data/models/*.joblib` + `data/processed/player_features.parquet` on first request — no "Analyze All" needed for model edge.
+
+**O/U odds fix**:
+- `american_price` from the Underdog public API is stored as an implied probability.  The Underdog app shows **entry payout multipliers** (0.85×, 1.06×); these are a different representation.
+- Dashboard now only renders the O/U Odds column when the line is **asymmetric** (`|over_payout − under_payout| > 0.01`). Symmetric standard lines show `–`.
+
+**Model features in player panel** (`/api/player-stats`):
+- `feat_l5`, `feat_l10`, `feat_season` — rolling stat averages from the model's parquet (vs NBA API live values)
+- `home_avg`, `away_avg`, `vs_opp_avg` — home/away and matchup splits
+- `usage_l5`, `usage_l10` — usage rate proxy from player features
+- `teammate_boost` — usage redistribution when a high-usage teammate is out
+- `feature_date` — date of the most recent feature row (freshness indicator)
+
+**Double-doubles / triple-doubles** (computed from existing NBA API game logs, no new calls):
+- `dd_pts_reb_L10`, `dd_pts_ast_L10`, `triple_double_L10` shown in player panel
+
+**New dashboard columns**: Model (projection median + P(over)%), Edge (model pp / rolling %*)
+**New dashboard filters**: "Model edge only", "Edge ≥ 4", "Edge ≥ 6"
+**Game log additions**: W/L result, FG%, +/- columns
+
+**TODO (Phase 6 remaining)**:
+- [ ] Q1/Q2 per-game period stats — requires `BoxScoreByPeriodV2` per game (20+ extra API calls per player). Feasible but expensive. Implement as opt-in endpoint.
+- [ ] Push project to GitHub (`ticklemepark`)
+
 _Patterns and mistakes discovered during development. Max 15 rules. Replace least relevant if full._
 
 1. **bbref abbreviations differ from nba_api in 3 cases**: BRK/BKN (Brooklyn), CHO/CHA (Charlotte), PHO/PHX (Phoenix). Always cross-reference via `BBREF_TO_NBA_API` in `constants.py` when joining datasets across sources. Getting this wrong silently drops rows with no error.

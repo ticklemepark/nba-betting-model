@@ -156,6 +156,8 @@ def _attach_to_games(
         rename_map = {f: f"{side}_{f}" for f in feature_cols}
         side_rolling = side_rolling.rename(columns=rename_map)
 
+        games[col] = games[col].astype(object)
+        side_rolling[col] = side_rolling[col].astype(object)
         games = pd.merge_asof(
             games,
             side_rolling.sort_values("DATE"),

@@ -9,6 +9,7 @@ from src.betting.entry_builder import (
     _PACE_OVER_BONUS,
     _SAME_GAME_OPPOSITE_PEN,
     _SAME_TEAM_OVER_BONUS,
+    _is_valid_entry,
     build_entries,
     rank_entries,
     score_correlation,
@@ -178,3 +179,119 @@ class TestRankEntries:
     def test_empty_entries_returns_empty(self):
         ranked = rank_entries([])
         assert ranked == []
+
+
+# ---------------------------------------------------------------------------
+# _is_valid_entry — platform rule enforcement
+# ---------------------------------------------------------------------------
+
+class TestIsValidEntry:
+    # ---- Rule 1: team diversity ----
+
+    def test_all_same_team_is_invalid(self):
+        picks = [
+            _prop(player_name="P1", team="LAL", game_id="g1"),
+            _prop(player_name="P2", team="LAL", game_id="g1"),
+            _prop(player_name="P3", team="LAL", game_id="g1"),
+        ]
+        assert _is_valid_entry(picks) is False
+
+    def test_two_teams_is_valid(self):
+        picks = [
+            _prop(player_name="P1", team="LAL", game_id="g1"),
+            _prop(player_name="P2", team="BOS", game_id="g1"),
+        ]
+        assert _is_valid_entry(picks) is True
+
+    def test_single_prop_pick_one_team_is_valid(self):
+        # A 1-pick entry (if allowed) has no diversity constraint
+        picks = [_prop(team="LAL")]
+        assert _is_valid_entry(picks) is True
+
+    def test_game_pick_plus_one_team_counts_as_diverse(self):
+        # GamePick adds diversity even if all PropPicks are same team
+        picks = [
+            _game(home="LAL", away="BOS", game_id="g1"),
+            _prop(player_name="P1", team="LAL", game_id="g1"),
+        ]
+        assert _is_valid_entry(picks) is True
+
+    # ---- Rule 2: per-player limits ----
+
+    def test_player_appears_twice_same_direction_is_invalid(self):
+        picks = [
+            _prop(player_name="LeBron", team="LAL", stat="PTS", direction="over"),
+            _prop(player_name="LeBron", team="LAL", stat="REB", direction="over"),
+            _prop(player_name="AD",     team="LAL", stat="PTS", direction="over"),
+            _prop(player_name="Tatum",  team="BOS", stat="PTS", direction="under"),
+        ]
+        assert _is_valid_entry(picks) is False
+
+    def test_player_appears_twice_mixed_direction_is_valid(self):
+        picks = [
+            _prop(player_name="LeBron", team="LAL", stat="PTS", direction="over"),
+            _prop(player_name="LeBron", team="LAL", stat="REB", direction="under"),
+            _prop(player_name="Tatum",  team="BOS", stat="PTS", direction="over"),
+        ]
+        assert _is_valid_entry(picks) is True
+
+    def test_player_three_picks_mixed_is_valid(self):
+        picks = [
+            _prop(player_name="LeBron", team="LAL", stat="PTS",  direction="over"),
+            _prop(player_name="LeBron", team="LAL", stat="REB",  direction="under"),
+            _prop(player_name="LeBron", team="LAL", stat="AST",  direction="over"),
+            _prop(player_name="Tatum",  team="BOS", stat="PTS",  direction="over"),
+        ]
+        assert _is_valid_entry(picks) is True
+
+    def test_player_four_picks_is_invalid(self):
+        picks = [
+            _prop(player_name="LeBron", team="LAL", stat="PTS",  direction="over"),
+            _prop(player_name="LeBron", team="LAL", stat="REB",  direction="under"),
+            _prop(player_name="LeBron", team="LAL", stat="AST",  direction="over"),
+            _prop(player_name="LeBron", team="LAL", stat="FG3M", direction="under"),
+            _prop(player_name="Tatum",  team="BOS", stat="PTS",  direction="over"),
+        ]
+        assert _is_valid_entry(picks) is False
+
+    def test_player_three_all_same_direction_is_invalid(self):
+        picks = [
+            _prop(player_name="LeBron", team="LAL", stat="PTS", direction="over"),
+            _prop(player_name="LeBron", team="LAL", stat="REB", direction="over"),
+            _prop(player_name="LeBron", team="LAL", stat="AST", direction="over"),
+            _prop(player_name="Tatum",  team="BOS", stat="PTS", direction="under"),
+        ]
+        assert _is_valid_entry(picks) is False
+
+    # ---- build_entries respects rules ----
+
+    def test_build_entries_excludes_all_same_team(self):
+        # All 5 picks are LAL players — no valid multi-pick entry possible
+        picks = [
+            _prop(player_name=f"P{i}", team="LAL", game_id="g1",
+                  stat=s, edge=0.08)
+            for i, s in enumerate(["PTS", "REB", "AST", "FG3M", "TOV"])
+        ]
+        entries = build_entries(picks, min_picks=2, max_picks=5)
+        for entry in entries:
+            teams = {p.team for p in entry if isinstance(p, PropPick)}
+            assert len(teams) >= 2, f"Entry has only one team: {teams}"
+
+    def test_build_entries_excludes_same_player_same_direction(self):
+        picks = [
+            _prop(player_name="LeBron", team="LAL", stat="PTS", direction="over", edge=0.15),
+            _prop(player_name="LeBron", team="LAL", stat="REB", direction="over", edge=0.14),
+            _prop(player_name="Tatum",  team="BOS", stat="PTS", direction="over", edge=0.10),
+            _prop(player_name="AD",     team="LAL", stat="PTS", direction="over", edge=0.08),
+        ]
+        entries = build_entries(picks, min_picks=2, max_picks=4)
+        for entry in entries:
+            by_player = {}
+            for p in entry:
+                if isinstance(p, PropPick):
+                    by_player.setdefault(p.player_name, []).append(p)
+            for player, pp in by_player.items():
+                if len(pp) >= 2:
+                    directions = {p.direction for p in pp}
+                    assert "over" in directions and "under" in directions, \
+                        f"{player} has {len(pp)} picks all in same direction"
