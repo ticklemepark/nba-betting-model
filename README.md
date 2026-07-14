@@ -1,6 +1,6 @@
 # NBA Betting Model
 
-An end-to-end prediction engine that flags mispriced prop lines on **Underdog Fantasy**. It ingests a decade of NBA data, engineers team- and player-level features, trains gradient-boosted models, compares model probabilities against Underdog's implied probabilities, and assembles correlation-aware multi-pick entries sized with fractional Kelly. An LLM narrative layer explains every pick using the model's actual evidence, with a verification step that blocks hallucinated claims.
+An end-to-end prediction engine that flags mispriced prop lines on **Underdog Fantasy**. It ingests a decade of NBA data, engineers team and player level features, trains gradient-boosted models, compares model probabilities against Underdog's implied probabilities, and assembles correlation-aware multi-pick entries sized with fractional Kelly. An LLM narrative layer explains every pick using the model's actual evidence, with a verification step that blocks hallucinated claims.
 
 ## How It Works
 
