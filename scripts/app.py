@@ -622,6 +622,96 @@ def api_rankings():
     return jsonify({"success": True, "rankings": rankings, "cached": False})
 
 
+@app.route("/api/narrative")
+def api_narrative():
+    """Evidence-grounded narrative for a single prop pick.
+
+    Query params:
+        player  (required)  e.g. "LeBron James"
+        stat    (required)  e.g. "PTS"
+        line    (required)  e.g. 25.5
+
+    Runs the prop model for this player/stat/line, builds an evidence packet
+    from the model output + feature parquet, generates an LLM narrative
+    (Anthropic; template fallback without ANTHROPIC_API_KEY), and verifies
+    it against the evidence before returning.
+
+    Response: {success, narrative, source, direction, edge_pp}
+    """
+    player = request.args.get("player", "").strip()
+    stat   = request.args.get("stat", "").strip().upper()
+    try:
+        line = float(request.args.get("line", ""))
+    except ValueError:
+        return jsonify({"success": False, "error": "line must be a number"}), 400
+    if not player or not stat:
+        return jsonify({"success": False, "error": "player and stat are required"}), 400
+
+    # Underdog implied P(over) for this line, if it's on today's board.
+    over_prob = 0.5
+    for row in _fetch_and_cache_props():
+        if row["player_name"] == player and row["stat"] == stat and \
+                abs(row["line"] - line) < 0.01:
+            over_prob = float(row["over_payout"])
+            team, opp, game_id, game_date = (
+                row["team"], row["opp"], row["game_id"], row["game_date"]
+            )
+            break
+    else:
+        team = opp = game_id = ""
+        game_date = str(datetime.now().date())
+
+    pred = _model_predict(player, stat, line, over_prob)
+    if pred is None:
+        return jsonify({
+            "success": False,
+            "error": "no model prediction available for this player/stat",
+        }), 404
+
+    from datetime import date as _date
+
+    from src.betting.edge_calculator import PropPick
+    from src.narrative import NarrativeGenerator, build_prop_evidence
+
+    edge = pred["model_edge"] / 100.0
+    pick = PropPick(
+        player_name        = player,
+        team               = team,
+        opp                = opp,
+        game_id            = game_id,
+        stat               = stat,
+        direction          = "over" if edge > 0 else "under",
+        line               = line,
+        model_median       = pred["model_median"],
+        model_low          = pred["model_low"],
+        model_high         = pred["model_high"],
+        model_prob_over    = pred["model_prob_over"],
+        underdog_prob_over = over_prob,
+        edge               = edge,
+        game_date          = _date.fromisoformat(str(game_date)[:10]),
+    )
+
+    feat_df = _load_player_features()
+    player_row = None
+    if not feat_df.empty:
+        name_col = next((c for c in feat_df.columns if c.upper() == "PLAYER_NAME"), None)
+        if name_col:
+            rows = feat_df[feat_df[name_col] == player]
+            if not rows.empty:
+                player_row = rows.iloc[-1]
+
+    evidence = build_prop_evidence(pick, player_row=player_row)
+    result = NarrativeGenerator().generate(evidence)
+
+    return jsonify({
+        "success":   True,
+        "narrative": result.text,
+        "source":    result.source,           # "llm" | "llm-retry" | "template"
+        "direction": pick.direction,
+        "edge_pp":   pred["model_edge"],
+    })
+
+
 @app.route("/api/status")
 def api_status():
     """Health-check: models loaded, features available, props cached."""

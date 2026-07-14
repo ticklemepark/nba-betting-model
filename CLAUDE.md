@@ -1,5 +1,5 @@
 # CLAUDE.md — NBA Betting Model (Underdog Fantasy)
-ssss
+
 ## Mission
 
 Build a profitable NBA betting model targeting **Underdog Fantasy** (the only legal platform for our California-based user). The system produces two bet types:
@@ -97,6 +97,13 @@ nba-betting-model/
 │   │   ├── kelly.py             # Fractional Kelly criterion for sizing
 │   │   ├── entry_builder.py     # Build optimal Underdog entries (correlation-aware)
 │   │   └── tracker.py           # Track bets, P&L, ROI
+│   │
+│   ├── narrative/               # LLM narrative layer (evidence-grounded pick explanations)
+│   │   ├── __init__.py
+│   │   ├── evidence.py          # EvidencePacket: the only citable facts per pick
+│   │   ├── generator.py         # Anthropic call + verify → retry → fallback loop
+│   │   ├── verifier.py          # Deterministic anti-hallucination gate (no LLM)
+│   │   └── templates.py         # Deterministic fallback narratives
 │   │
 │   └── utils/
 │       ├── __init__.py
@@ -511,94 +518,21 @@ For single-pick accuracy (before combining into entries):
 - Game outcomes: target **58%+ accuracy** (home win base rate is ~57%, so we need to beat that on our filtered picks)
 - Player props: target **55%+ accuracy** on bets we choose to take (we only bet where edge exceeds threshold, so accuracy on selected bets should be higher than overall accuracy)
 
----     dddd
+---
 
-## Development Phases
+## LLM Narrative Layer
 
-### Phase 1: Data Foundation (Week 1-2) — STATUS: COMPLETE
-- [x] Refactor notebook scraper into `src/data/scrapers/bbref.py`
-- [x] Set up PostgreSQL schema with migrations (`src/data/migrations/001_base_tables.sql`)
-- [x] Refactor ELO into `src/features/team/elo.py` with tests
-- [x] Refactor win streak, B2B, H2H into their respective modules with tests
-- [x] `src/data/db.py` — PostgreSQL connection manager
-- [x] `src/utils/constants.py` — team abbreviations and cross-reference maps
-- [x] **Verified**: `scripts/verify_phase1.py` confirms ELO + streaks are exact matches on 1230 2023-24 games (via nba_api); B2B matches exactly (no expansion teams in 2024); H2H diffs are pre-documented notebook data leakage, not our bugs. 10/10 checks pass.
+`src/narrative/` generates a short "why we picked this" spiel for every pick, grounded in the model's actual evidence and gated by a deterministic verifier that blocks hallucinated claims.
 
-### Phase 2: Feature Expansion (Week 3-4) — STATUS: COMPLETE
-- [x] `src/data/nba_api_client.py` — nba_api wrapper (team + player game logs)
-- [x] `src/data/migrations/002_team_game_logs.sql` — DB table for raw team logs
-- [x] `src/features/team/ratings.py` — rolling off/def/net ratings (L5/L10/L20)
-- [x] `src/features/team/pace.py` — rolling pace + projected game pace (L5/L10/L20)
-- [x] `src/features/team/four_factors.py` — rolling eFG%, TOV%, ORB%, FTR (L5/L10/L20)
-- [x] `src/features/team/schedule.py` — added `compute_rest_days` (continuous 1–7)
-- [x] `src/features/team/form.py` — added `compute_wins_rolling` (wins in last N games)
-- [x] Player-level feature pipeline (`src/features/player/`) — rolling_stats, usage, home_away, matchup, availability
-- [x] Injury report data source (`src/data/scrapers/injury_report.py`) — ESPN scraper
-- [x] Feature pipeline orchestrator (`src/features/pipeline.py`) — `build_game_features` + `build_player_features`
-- [x] **Verified**: 187/187 tests passing (all team + player + pipeline modules covered)
+- **Evidence packets** (`evidence.py`): the ONLY facts a narrative may cite — pick fields (line, projection, quantile range, probabilities, edge), the player's feature-parquet row (L5/L10/season averages, matchup history, usage), and today's injury report. Nothing outside the packet is citable.
+- **Generation** (`generator.py`): Anthropic API (`NARRATIVE_MODEL`, default `claude-haiku-4-5`), prompt built solely from the evidence JSON with hard rules against outside knowledge.
+- **Verification** (`verifier.py`): pure string/number matching, no LLM. Every cited number must match an evidence value at the cited precision; direction words must match the pick; only the pick's player (plus listed OUT/DOUBTFUL players) may be named. Failing narratives are retried once with violations fed back, then replaced by a template narrative (`templates.py`) assembled directly from evidence.
+- **Surfaces**: `scripts/daily_pipeline.py --narratives` (WHY THESE PICKS section) and `GET /api/narrative` on the dashboard.
+- **Invariant** (enforced by tests): template output must always pass verification, and no narrative reaches the user unverified.
 
-### Phase 3: Modeling (Week 5-6) — STATUS: COMPLETE
-- [x] `scripts/build_historical_features.py` — fetch nba_api team logs + run pipeline, save to parquet
-- [x] `src/models/calibration.py` — manual isotonic/sigmoid calibration (sklearn 1.8+ compatible)
-- [x] `src/models/game_outcome.py` — XGBoost classifier, walk-forward train/eval, save/load
-- [x] `src/models/ensemble.py` — EloLogitModel + FourFactorLGBModel + EnsembleModel (weight tuning)
-- [x] `src/models/backtest.py` — BacktestResult: win rate, ROI, Sharpe, max drawdown, calibration curve
-- [x] `src/models/player_props.py` — PlayerPropModel (3 quantile LightGBM), train_all_props, run_prop_backtest
-- [x] `scripts/build_player_features.py` — fetch player + team logs (20 API calls), save player_features.parquet
-- [x] `scripts/train_player_props.py` — train all stat models, run backtests, print summary, save artifacts
-- [x] **Verified**: 283/283 tests passing
+---
 
-### Phase 4: Underdog Integration (Week 7-8) — STATUS: COMPLETE
-- [x] `src/data/migrations/003_betting_tables.sql` — underdog_lines, bet_entries, entry_picks tables
-- [x] `src/data/scrapers/underdog.py` — unofficial Underdog API client (prop + game lines, `UNDERDOG_TOKEN` in .env)
-- [x] `src/betting/edge_calculator.py` — `PropPick`, `GamePick`, `screen_prop_picks`, `screen_game_picks`
-- [x] `src/betting/kelly.py` — `fractional_kelly`, `size_entry`, `summarise_sizing`
-- [x] `src/betting/entry_builder.py` — `score_correlation`, `build_entries`, `rank_entries`
-- [x] `src/betting/tracker.py` — `log_entry`, `settle_entry`, `get_pnl_summary`
-- [x] `scripts/daily_pipeline.py` — full daily orchestration (fetch → screen → build → size → log)
-- [x] **Verified**: 369/369 tests passing
-
-### Phase 5: Go Live (Week 9+) — STATUS: INFRASTRUCTURE COMPLETE
-- [x] `src/data/scrapers/underdog.py` — switched to public `/beta/v6/over_under_lines` endpoint (no auth, no token expiry)
-- [x] `scripts/app.py` — Flask web dashboard with `/api/props`, `/api/player-stats`, `/api/rankings`, `/api/status`
-- [x] `templates/index.html` — dark-theme prop dashboard UI with sorting, filtering, edge badges, player drill-down panel
-- [x] `scripts/settle_results.py` — post-game settlement: fetches actuals from nba_api, marks entries won/lost
-- [x] `scripts/pnl_report.py` — P&L summary report (overall + by entry size + daily breakdown + Phase 3 comparison)
-- [x] **Verified**: 393/393 tests passing
-- [ ] Run daily pipeline in shadow mode (paper trading) for 2 weeks
-- [ ] Compare paper results to backtest expectations
-- [ ] If within expected range — go live with quarter-Kelly sizing
-- [ ] Gradually increase sizing as track record builds confidence
-
-### Phase 6: Dashboard Intelligence (Week 10+) — STATUS: COMPLETE
-The dashboard is now a full model UI, not just a prop browser.
-
-**Edge unification**:
-- Dashboard and pipeline now use the **same edge formula**: `P(stat > line) [ML model] − P(over) [Underdog implied probability]`, in percentage-points (pp).
-- Edge displays as `+7.2pp` (model) or `+4.8%*` (rolling average fallback when models not loaded).
-- Model predictions load **eagerly** from `data/models/*.joblib` + `data/processed/player_features.parquet` on first request — no "Analyze All" needed for model edge.
-
-**O/U odds fix**:
-- `american_price` from the Underdog public API is stored as an implied probability.  The Underdog app shows **entry payout multipliers** (0.85×, 1.06×); these are a different representation.
-- Dashboard now only renders the O/U Odds column when the line is **asymmetric** (`|over_payout − under_payout| > 0.01`). Symmetric standard lines show `–`.
-
-**Model features in player panel** (`/api/player-stats`):
-- `feat_l5`, `feat_l10`, `feat_season` — rolling stat averages from the model's parquet (vs NBA API live values)
-- `home_avg`, `away_avg`, `vs_opp_avg` — home/away and matchup splits
-- `usage_l5`, `usage_l10` — usage rate proxy from player features
-- `teammate_boost` — usage redistribution when a high-usage teammate is out
-- `feature_date` — date of the most recent feature row (freshness indicator)
-
-**Double-doubles / triple-doubles** (computed from existing NBA API game logs, no new calls):
-- `dd_pts_reb_L10`, `dd_pts_ast_L10`, `triple_double_L10` shown in player panel
-
-**New dashboard columns**: Model (projection median + P(over)%), Edge (model pp / rolling %*)
-**New dashboard filters**: "Model edge only", "Edge ≥ 4", "Edge ≥ 6"
-**Game log additions**: W/L result, FG%, +/- columns
-
-**TODO (Phase 6 remaining)**:
-- [ ] Q1/Q2 per-game period stats — requires `BoxScoreByPeriodV2` per game (20+ extra API calls per player). Feasible but expensive. Implement as opt-in endpoint.
-- [ ] Push project to GitHub (`ticklemepark`)
+## Learned Rules
 
 _Patterns and mistakes discovered during development. Max 15 rules. Replace least relevant if full._
 

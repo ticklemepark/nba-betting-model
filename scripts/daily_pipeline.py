@@ -853,6 +853,63 @@ def print_pick_sheet(
     print(f"\n{sep}\n")
 
 
+def print_narratives(
+    entries: list,
+    player_df: pd.DataFrame,
+    injuries: pd.DataFrame | None = None,
+    game_df: pd.DataFrame | None = None,
+    model: str | None = None,
+) -> None:
+    """Print an evidence-grounded narrative for every unique pick in the entries.
+
+    Narratives come from src.narrative: LLM-generated (Anthropic) when
+    ANTHROPIC_API_KEY is set, verified against the model's own evidence,
+    with a deterministic template fallback.  Nothing printed here can cite
+    a fact the pipeline didn't produce.
+    """
+    from src.narrative import NarrativeGenerator, narratives_for_picks
+    from src.narrative.generator import pick_key
+
+    unique_picks: list = []
+    seen: set[str] = set()
+    for picks, _score in rank_entries(entries):
+        for pick in picks:
+            key = pick_key(pick)
+            if key not in seen:
+                seen.add(key)
+                unique_picks.append(pick)
+
+    if not unique_picks:
+        return
+
+    generator = NarrativeGenerator(model=model)
+    if not generator.available():
+        log.info("ANTHROPIC_API_KEY not set — using template narratives.")
+
+    results = narratives_for_picks(
+        unique_picks,
+        player_df=player_df,
+        injuries=injuries,
+        game_df=game_df,
+        generator=generator,
+    )
+
+    sep = "=" * 60
+    print(sep)
+    print("  WHY THESE PICKS")
+    print(sep)
+    for pick in unique_picks:
+        res = results.get(pick_key(pick))
+        if res is None:
+            continue
+        tag = "" if res.source.startswith("llm") else "  [template]"
+        print(f"\n• {pick_key(pick)}{tag}")
+        print(f"  {res.text}")
+        if res.violations:
+            log.debug("Narrative fallback after violations: %s", res.violations)
+    print(f"\n{sep}\n")
+
+
 # ---------------------------------------------------------------------------
 # Post-hoc prediction adjustment
 # ---------------------------------------------------------------------------
@@ -982,6 +1039,13 @@ def main() -> None:
                         help=f"Kelly fraction (default: {_DEFAULT_KELLY})")
     parser.add_argument("--dry-run", action="store_true",
                         help="Skip DB writes and Underdog API calls")
+    parser.add_argument("--narratives", action="store_true",
+                        help="Generate LLM narratives explaining each pick "
+                             "(requires ANTHROPIC_API_KEY; falls back to "
+                             "template narratives without one)")
+    parser.add_argument("--narrative-model", type=str, default=None,
+                        help="Anthropic model for narratives "
+                             "(default: NARRATIVE_MODEL env or claude-haiku-4-5)")
     args = parser.parse_args()
 
     today: date = (
@@ -1156,7 +1220,22 @@ def main() -> None:
     )
 
     # -----------------------------------------------------------------------
-    # 7. Log to DB (unless dry run)
+    # 7. Narratives — evidence-grounded "why we picked this" spiels
+    # -----------------------------------------------------------------------
+    if args.narratives:
+        try:
+            print_narratives(
+                entries,
+                player_df=player_df,
+                injuries=injuries,
+                game_df=game_df,
+                model=args.narrative_model,
+            )
+        except Exception as exc:
+            log.warning("Narrative generation failed: %s", exc)
+
+    # -----------------------------------------------------------------------
+    # 8. Log to DB (unless dry run)
     # -----------------------------------------------------------------------
     if not args.dry_run:
         for i, (picks, _score) in enumerate(rank_entries(entries)):
